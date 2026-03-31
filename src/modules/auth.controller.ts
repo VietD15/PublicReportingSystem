@@ -1,10 +1,14 @@
-
 import { Request, Response } from 'express';
 import authModel from '../models/auth.model';
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from 'google-auth-library';
+import roleSchema from '../models/auth/roles';
+import { ROLES } from '../constant/role';
+import {userRepo} from "../repos/index";
+
+
 
 const secret = process.env.SECRET_KEY;
 const refreshSecret = process.env.JWT_REFRESH_SECRET;
@@ -21,12 +25,12 @@ const client = new OAuth2Client(googleClientId);
 export const register = async (req: Request, res: Response) => {
     try {
         let { userName, email, password } = req.body;
-        
+
         // Trim inputs
         userName = userName?.trim();
         email = email?.trim().toLowerCase();
         password = password?.trim();
-        
+
         if (!userName || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -46,7 +50,7 @@ export const register = async (req: Request, res: Response) => {
                 message: "Password must be at least 6 characters"
             })
         }
-        
+
         const user = await authModel.findOne({
             $or: [
                 { email },
@@ -60,15 +64,25 @@ export const register = async (req: Request, res: Response) => {
             })
         }
         const hashedPassword = await bcrypt.hash(password, 12)
-        await authModel.create({
+        const newUser = await authModel.create({
             userName,
             email,
             password: hashedPassword,
         })
+
+        const userRole = await roleSchema.findOne({ name: ROLES.USERROLE });
+        if (!userRole) {
+            return res.status(409).json({
+                success: false,
+                message: "Initial user role not found. Please contact support."
+            })
+        }
+        await userRepo.AddNewRolesToNewUser(newUser._id.toString(), userRole._id.toString());
         return res.status(201).json({
             success: true,
             message: "Account created successfully"
         })
+
     } catch (error) {
         console.error("Register error:", error);
         return res.status(500).json({
@@ -77,12 +91,13 @@ export const register = async (req: Request, res: Response) => {
         });
     }
 }
+
 export const login = async (req: Request, res: Response) => {
     try {
         let { identifier, password } = req.body;
         identifier = identifier?.trim().toLowerCase();
         password = password?.trim();
-        
+
         if (!identifier || !password) {
             return res.status(400).json({
                 success: false,
@@ -112,23 +127,34 @@ export const login = async (req: Request, res: Response) => {
                 message: "Incorrect email or password"
             })
         }
-        const accessToken = jwt.sign({ _id: user._id }, secret, { expiresIn: '15m' });
+        const roleIds = await userRepo.GetRoleIDsByUserID(user._id.toString());
+        if (!roleIds.length) {
+            return res.status(403).json({
+                success: false,
+                message: "User role not found"
+            });
+        }
+
+        console.log("User " + user.userName + " logged in with roles: " + roleIds.join(", "));
+
+        const accessToken = jwt.sign({ _id: user._id, roleIds }, secret, { expiresIn: '15m' });
         const refreshToken = jwt.sign({ _id: user._id }, refreshSecret, { expiresIn: '7d' });
         user.refreshToken = refreshToken;
         await user.save();
         const isProduction = process.env.NODE_ENV === 'production';
-        
+
+
         return res.status(200)
-            .cookie("accessToken", accessToken, { 
-                httpOnly: true, 
-                sameSite: "lax", 
-                secure: isProduction, 
-                maxAge: 15 * 60 * 1000 
+            .cookie("accessToken", accessToken, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: isProduction,
+                maxAge: 24 * 60 * 60 * 1000
             })
-            .cookie("refreshToken", refreshToken, { 
-                httpOnly: true, 
-                sameSite: "lax", 
-                secure: isProduction, 
+            .cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: isProduction,
                 maxAge: 7 * 24 * 60 * 60 * 1000
             })
             .json({
@@ -155,7 +181,7 @@ export const login = async (req: Request, res: Response) => {
 export const loginWithGoogle = async (req: Request, res: Response) => {
     try {
         const { idToken } = req.body;
-        
+
         if (!idToken) {
             return res.status(400).json({
                 success: false,
@@ -198,41 +224,56 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
 
         // Check if user exists in the database
         let user = await authModel.findOne({ email });
-        
+
         if (!user) {
             // Create new user for Google login
             const randomPassword = crypto.randomBytes(32).toString('hex');
             const hashedPassword = await bcrypt.hash(randomPassword, 12);
-            
+
             user = await authModel.create({
                 userName: userName,
                 email: email,
                 password: hashedPassword,
                 types: "google"
             });
+            const userRole = await roleSchema.findOne({ name: ROLES.USERROLE });
+            if (!userRole) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Initial user role not found. Please contact support."
+                })
+            }
+            await userRepo.AddNewRolesToNewUser(user._id.toString(), userRole._id.toString());
         }
 
+        const roleIds = await userRepo.GetRoleIDsByUserID(user._id.toString());
+        if (!roleIds.length) {
+            return res.status(403).json({
+                success: false,
+                message: "User role not found"
+            });
+        }
         // Generate tokens (same as regular login)
-        const accessToken = jwt.sign({ _id: user._id }, secret, { expiresIn: '15m' });
+        const accessToken = jwt.sign({ _id: user._id, roleIds }, secret, { expiresIn: '15m' });
         const refreshToken = jwt.sign({ _id: user._id }, refreshSecret, { expiresIn: '7d' });
-        
+
         // Save refresh token to database
         user.refreshToken = refreshToken;
         await user.save();
 
         const isProduction = process.env.NODE_ENV === 'production';
-        
+
         return res.status(200)
-            .cookie("accessToken", accessToken, { 
-                httpOnly: true, 
-                sameSite: "lax", 
-                secure: isProduction, 
-                maxAge: 15 * 60 * 1000 
+            .cookie("accessToken", accessToken, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: isProduction,
+                maxAge: 15 * 60 * 1000
             })
-            .cookie("refreshToken", refreshToken, { 
-                httpOnly: true, 
-                sameSite: "lax", 
-                secure: isProduction, 
+            .cookie("refreshToken", refreshToken, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: isProduction,
                 maxAge: 7 * 24 * 60 * 60 * 1000
             })
             .json({
@@ -258,18 +299,18 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
 export const refreshToken = async (req: Request, res: Response) => {
     try {
         const tokenToRefresh = req.cookies?.refreshToken || req.body.refreshToken;
-        
+
         if (!tokenToRefresh) {
             return res.status(401).json({ success: false, message: "Refresh token is required" });
         }
 
         const decoded = jwt.verify(tokenToRefresh, refreshSecret) as { _id: string };
-        
-        const user = await authModel.findOne({ 
-            _id: decoded._id, 
-            refreshToken: tokenToRefresh 
+
+        const user = await authModel.findOne({
+            _id: decoded._id,
+            refreshToken: tokenToRefresh
         });
-        
+
         if (!user) {
             return res.status(403).json({ success: false, message: "Invalid refresh token. Please login again." });
         }
@@ -301,7 +342,7 @@ export const refreshToken = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
     try {
         const tokenToRevoke = req.cookies?.refreshToken || req.body.refreshToken;
-        
+
         if (tokenToRevoke) {
             await authModel.updateOne(
                 { refreshToken: tokenToRevoke },

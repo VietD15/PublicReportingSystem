@@ -1,3 +1,5 @@
+import { Delete$ } from "@aws-sdk/client-s3";
+
 export const ERROR_CODES = {
     INVALID_INPUT: {
         statusCode: 400,
@@ -37,4 +39,9 @@ export const ERROR_CODES = {
         code: "UPLOAD_ERROR",
         message: "File upload failed"
     },
+    DELETE_ERROR_R2: {
+        statusCode : 500,
+        code: "DELETE_ERROR_R2",
+        message: "Failed to delete file from R2"
+    }
 } as const;
