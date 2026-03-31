@@ -1,8 +1,8 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
-import { AppError } from "../utils/app-error";
-import { ERROR_CODES } from "../constant/error";
-import { r2 } from "../config/r2";
+import { AppError } from "../../../utils/app-error";
+import { ERROR_CODES } from "../../../constant/error";
+import { r2 } from "../../../config/r2";
 
 dotenv.config();
 

@@ -29,6 +29,14 @@ const authSchema = new mongoose.Schema({
         enum: ["login", "login-google"],
         default: "login"
     },
+    lockEnd: {
+        type: Date,
+        default: null
+    },
+    lockReason: {
+        type: String,
+        default: null
+    }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME

@@ -1,24 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/app-error';
 
-const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack); // Log the error stack trace for debugging
-  switch (err.statusCode) {
-    case 400:
-      return res.status(400).json({ message: err.message });
-    case 401:
-      return res.status(401).json({ message: 'Unauthorized' });
-    case 403:
-      return res.status(403).json({ message: 'Forbidden' });
-    case 404:
-      return res.status(404).json({ message: 'Not Found' });
-    case 415:
-      return res.status(415).json({ message: err.message });
-    case 500:
-      return res.status(500).json({ message: 'Internal Server Error' });
-    default:
-      next(err); // Pass the error to the default error handler
+const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      statuscoded: err.statusCode,
+      code: err.code,
+      message: err.message,
+      details: err.details || null,
+    });
   }
-}
+
+  // lỗi không xác định
+  console.error(err);
+
+  return res.status(500).json({
+    success: false,
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Internal Server Error",
+  });
+};
+
 
 export default errorHandler;
