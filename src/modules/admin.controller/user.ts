@@ -3,7 +3,7 @@ import { PageArray } from "../../helper/pageAray";
 import { UserMapper } from "../../mapper/auth/user.mapper";
 import { ERROR_CODES } from "../../constant/error";
 import { AppError } from "../../utils/app-error";
-import {userRepo} from "../../repos/index";
+import { userRepo } from "../../repos/index";
 
 // assignRoleToUser
 export const AssignRoleToUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -59,7 +59,7 @@ export const GetUsers = async (req: Request, res: Response, next: NextFunction) 
 }
 
 export const GetUserById = async (req: Request, res: Response, next: NextFunction) => {
-        try {
+    try {
         const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
         if (!id) {
             const err = ERROR_CODES.NOT_FOUND;
@@ -67,14 +67,14 @@ export const GetUserById = async (req: Request, res: Response, next: NextFunctio
         }
 
         console.log("GetUserById userID:", id);
-        
+
 
         const result = await userRepo.getUser(id);
         if (!result) {
             const err = ERROR_CODES.NOT_FOUND;
             return next(new AppError(err.statusCode, err.code, "User not found"));
         }
-        
+
         const responseData = UserMapper.toUserResponse(result.user, result.roles);
 
         return res.status(200).json({
@@ -82,11 +82,39 @@ export const GetUserById = async (req: Request, res: Response, next: NextFunctio
             user: responseData,
         });
     } catch (error) {
-        console.error("GetUserById error:", error); 
+        console.error("GetUserById error:", error);
         if (error instanceof AppError) {
             return next(error);
         }
         const err = ERROR_CODES.SERVER_ERROR;
         return next(new AppError(err.statusCode, err.code, "Internal Server Error"));
-        }
+    }
 }
+export const LockOrUnlockUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const { lockReason } = req.body || {};
+
+        if (!id) {
+            const err = ERROR_CODES.NOT_FOUND;
+            return next(new AppError(err.statusCode, err.code, "User not found"));
+        }
+
+        const result = await userRepo.lockOrUnlockUser(id, lockReason);
+
+        return res.status(200).json({
+            success: true,
+            message: result.action === "locked"
+                ? "User locked successfully"
+                : "User unlocked successfully",
+            data: result
+        });
+
+    } catch (error) {
+        console.error("LockOrUnlockUser error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : "Internal Server Error"
+        });
+    }
+};
