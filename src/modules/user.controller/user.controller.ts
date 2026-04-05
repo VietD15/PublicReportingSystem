@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { uploadToR2 } from "../helper/features/r2/r2-upload";
-import { AppError } from "../utils/app-error";
-import { ERROR_CODES } from "../constant/error";
-import {userRepo} from "../repos/index";
+import { uploadToR2 } from "../../helper/features/r2/r2-upload";
+import { AppError } from "../../utils/app-error";
+import { ERROR_CODES } from "../../constant/error";
+import {userRepo} from "../../repos/index";
 
 export const uploadFIle = async (req: Request, res: Response) => {
     try {

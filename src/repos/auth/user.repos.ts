@@ -156,6 +156,8 @@ export const GetMe = async (userId: string): Promise<GetMeInterface | null> => {
         user_id: user?._id.toString() || "",
         username: user?.userName || "",
         email: user?.email || "",
+        lockEnd: user?.lockEnd || null,
+        lockReason: user?.lockReason || null,
         permissions: aggregate.map(a => ({
             permission: a.permission,
             resource: a.resource,
@@ -207,3 +209,53 @@ export const getUser = async (userId: string) => {
         roles: roleName
     }
 }
+export const checkLockAccount = async (userId: string) => {
+    const user = await authSchema.findOne({ _id: userId }).lean();
+    if (!user) {
+        throw new Error("User not found");
+    }
+    if (user.lockEnd && user.lockEnd > new Date()) {
+        return {
+            locked: true,
+            lockEnd: user.lockEnd,
+            lockReason: user.lockReason
+        }
+    }
+    return {
+        locked: false
+    }
+}
+
+export const lockOrUnlockUser = async (userId: string, lockReason?: string) => {
+    const user = await authSchema.findById(userId);
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    const now = new Date();
+    const isLocked = user.lockEnd && user.lockEnd > now;
+
+    let action: "locked" | "unlocked";
+
+    if (isLocked) {
+        user.lockEnd = null;
+        user.lockReason = null;
+        action = "unlocked";
+    } else {
+        const lockTime = new Date();
+        lockTime.setFullYear(lockTime.getFullYear() + 10);
+
+        user.lockEnd = lockTime;
+        user.lockReason = lockReason || "No reason provided";
+        action = "locked";
+    }
+
+    await user.save();
+
+    return {
+        userId,
+        lockEnd: user.lockEnd,
+        lockReason: user.lockReason,
+        action
+    };
+};

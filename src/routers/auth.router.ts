@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { register, login, logout, refreshToken, loginWithGoogle } from '../modules/auth.controller';
+import { register, login, logout, refreshToken, loginWithGoogle } from '../modules/auth.controller/auth.controller';
 import { authLimiter } from '../middlewares/rate-limit.middleware';
 import { DeletePermission, GetActions, GetPermission, GetPermissions, GetResources, UpsertPermission } from '../modules/admin.controller/permission';
 import { DeleteRole, DisableOrEnableRole, GetRoleById, GetRoles, UpsertRole } from '../modules/admin.controller/role';
-import { AssignRoleToUser, GetUsers,GetUserById } from '../modules/admin.controller/user';
+import { AssignRoleToUser, GetUsers,GetUserById, LockOrUnlockUser } from '../modules/admin.controller/user';
 
 const router = Router();
 
@@ -16,6 +16,7 @@ router.post("/refresh-token", refreshToken);
 router.post("/assign-roles", AssignRoleToUser);
 router.get("/users", GetUsers);
 router.get("/users/:id", GetUserById);
+router.post("/users/lockOrUnlock/:id", LockOrUnlockUser);
 
 // permission
 router.post("/permissions", UpsertPermission);

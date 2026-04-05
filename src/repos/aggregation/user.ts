@@ -14,5 +14,7 @@ export interface GetMeInterface {
     user_id: string;
     username: string;
     email: string;
+    lockEnd: Date | null;
+    lockReason: string | null;
     permissions: PermissionGetMe[] | null;
 }

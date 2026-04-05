@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMe, uploadFIle } from "../modules/user.controller";
+import { getMe, uploadFIle } from "../modules/user.controller/user.controller";
 import multer from "multer";
 import isAuthenticated from "../middlewares/isAuthenticated";
 import checkPermission from "../middlewares/checkPermission";
