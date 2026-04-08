@@ -59,8 +59,8 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
     try {
-        let { identifier, password } = req.body;
-        const result = await authRepo.loginService(identifier, password);
+        let { userName, password } = req.body;
+        const result = await authRepo.loginService(userName, password);
         if (!result.success || !result.data) {
             return res.status(400).json(result);
         }

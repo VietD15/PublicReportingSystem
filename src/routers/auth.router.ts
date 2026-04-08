@@ -3,7 +3,7 @@ import { register, login, logout, refreshToken, loginWithGoogle } from '../modul
 import { authLimiter } from '../middlewares/rate-limit.middleware';
 import { DeletePermission, GetActions, GetPermission, GetPermissions, GetResources, UpsertPermission } from '../modules/admin.controller/permission';
 import { DeleteRole, DisableOrEnableRole, GetRoleById, GetRoles, UpsertRole } from '../modules/admin.controller/role';
-import { AssignRoleToUser, GetUsers,GetUserById, LockOrUnlockUser } from '../modules/admin.controller/user';
+import { AssignRoleToUser, CreateNewUser, GetUsers, GetUserById, LockOrUnlockUser, UpdateUser } from '../modules/admin.controller/user';
 
 const router = Router();
 
@@ -14,8 +14,10 @@ router.post("/loginGoogle", authLimiter, loginWithGoogle);
 router.post("/logout", logout);
 router.post("/refresh-token", refreshToken);
 router.post("/assign-roles", AssignRoleToUser);
+router.post("/users", CreateNewUser);
 router.get("/users", GetUsers);
 router.get("/users/:id", GetUserById);
+router.patch("/users/:id", UpdateUser);
 router.post("/users/lockOrUnlock/:id", LockOrUnlockUser);
 
 // permission

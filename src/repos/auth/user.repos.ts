@@ -3,6 +3,8 @@ import { GetMeInterface } from "../aggregation/user";
 import authSchema from "../../models/auth.model";
 import userRoleSchema from "../../models/auth/user_role";
 import roleSchema from "../../models/auth/roles";
+import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 
 export const GetRoleIDsByUserID = async (userId: string) => {
     const roles = await userRoleScheme
@@ -257,5 +259,195 @@ export const lockOrUnlockUser = async (userId: string, lockReason?: string) => {
         lockEnd: user.lockEnd,
         lockReason: user.lockReason,
         action
+    };
+};
+
+export const createNewUserByAdmin = async (
+    userName: string,
+    email: string,
+    password: string,
+    roleIds?: string[]
+) => {
+    userName = userName?.trim().toLowerCase();
+    email = email?.trim().toLowerCase();
+    password = password?.trim();
+
+    if (!userName || !email || !password) {
+        return {
+            success: false,
+            message: "All fields are required"
+        };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return {
+            success: false,
+            message: "Invalid email format"
+        };
+    }
+
+    if (password.length < 6) {
+        return {
+            success: false,
+            message: "Password must be at least 6 characters"
+        };
+    }
+
+    if (roleIds && !Array.isArray(roleIds)) {
+        return {
+            success: false,
+            message: "roleIds must be an array"
+        };
+    }
+
+    const exists = await authSchema.findOne({
+        $or: [{ userName }, { email }]
+    });
+
+    if (exists) {
+        return {
+            success: false,
+            message: "This email or username is already registered"
+        };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const newUser = await authSchema.create({
+        userName,
+        email,
+        password: hashedPassword,
+        types: "login"
+    });
+
+    if (roleIds && roleIds.length > 0) {
+        await assignRoleToUser(newUser._id.toString(), roleIds);
+    }
+
+    const user = await getUser(newUser._id.toString());
+
+    return {
+        success: true,
+        data: user
+    };
+};
+
+export const updateUserByAdmin = async (
+    userId: string,
+    payload: {
+        userName?: string;
+        email?: string;
+        password?: string;
+        roleIds?: string[];
+    }
+) => {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return {
+            success: false,
+            message: "User not found"
+        };
+    }
+
+    const user = await authSchema.findById(userId);
+    if (!user) {
+        return {
+            success: false,
+            message: "User not found"
+        };
+    }
+
+    const userName = payload.userName?.trim().toLowerCase();
+    const email = payload.email?.trim().toLowerCase();
+    const password = payload.password?.trim();
+    const roleIds = payload.roleIds;
+
+    if (roleIds !== undefined && !Array.isArray(roleIds)) {
+        return {
+            success: false,
+            message: "roleIds must be an array"
+        };
+    }
+
+    if (
+        userName === undefined &&
+        email === undefined &&
+        password === undefined &&
+        roleIds === undefined
+    ) {
+        return {
+            success: false,
+            message: "No data to update"
+        };
+    }
+
+    if (email !== undefined) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return {
+                success: false,
+                message: "Invalid email format"
+            };
+        }
+
+        const duplicateEmail = await authSchema.findOne({
+            email,
+            _id: { $ne: userId }
+        });
+
+        if (duplicateEmail) {
+            return {
+                success: false,
+                message: "Email is already in use"
+            };
+        }
+
+        user.email = email;
+    }
+
+    if (userName !== undefined) {
+        if (!userName) {
+            return {
+                success: false,
+                message: "Username cannot be empty"
+            };
+        }
+
+        const duplicateUserName = await authSchema.findOne({
+            userName,
+            _id: { $ne: userId }
+        });
+
+        if (duplicateUserName) {
+            return {
+                success: false,
+                message: "Username is already in use"
+            };
+        }
+
+        user.userName = userName;
+    }
+
+    if (password !== undefined) {
+        if (password.length < 6) {
+            return {
+                success: false,
+                message: "Password must be at least 6 characters"
+            };
+        }
+
+        user.password = await bcrypt.hash(password, 12);
+    }
+
+    await user.save();
+
+    if (roleIds !== undefined) {
+        await assignRoleToUser(userId, roleIds);
+    }
+
+    const userUpdated = await getUser(userId);
+
+    return {
+        success: true,
+        data: userUpdated
     };
 };
