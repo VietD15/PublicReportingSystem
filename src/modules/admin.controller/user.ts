@@ -118,3 +118,70 @@ export const LockOrUnlockUser = async (req: Request, res: Response, next: NextFu
         });
     }
 };
+
+export const CreateNewUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { userName, email, password, roleIds } = req.body;
+
+        const result = await userRepo.createNewUserByAdmin(userName, email, password, roleIds);
+        if (!result.success || !result.data) {
+            const err = ERROR_CODES.INVALID_INPUT;
+            return next(new AppError(err.statusCode, err.code, result.message || "Failed to create user"));
+        }
+
+        const responseData = UserMapper.toUserResponse(result.data.user, result.data.roles);
+
+        return res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            user: responseData
+        });
+    } catch (error) {
+        console.error("CreateNewUser error:", error);
+        if (error instanceof AppError) {
+            return next(error);
+        }
+        const err = ERROR_CODES.SERVER_ERROR;
+        return next(new AppError(err.statusCode, err.code, "Internal Server Error"));
+    }
+};
+
+export const UpdateUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        if (!id) {
+            const err = ERROR_CODES.NOT_FOUND;
+            return next(new AppError(err.statusCode, err.code, "User not found"));
+        }
+
+        const { userName, email, password, roleIds } = req.body;
+
+        const result = await userRepo.updateUserByAdmin(id, {
+            userName,
+            email,
+            password,
+            roleIds
+        });
+
+        if (!result.success || !result.data) {
+            const isNotFound = result.message === "User not found";
+            const err = isNotFound ? ERROR_CODES.NOT_FOUND : ERROR_CODES.INVALID_INPUT;
+            return next(new AppError(err.statusCode, err.code, result.message || "Failed to update user"));
+        }
+
+        const responseData = UserMapper.toUserResponse(result.data.user, result.data.roles);
+
+        return res.status(200).json({
+            success: true,
+            message: "User updated successfully",
+            user: responseData
+        });
+    } catch (error) {
+        console.error("UpdateUser error:", error);
+        if (error instanceof AppError) {
+            return next(error);
+        }
+        const err = ERROR_CODES.SERVER_ERROR;
+        return next(new AppError(err.statusCode, err.code, "Internal Server Error"));
+    }
+};

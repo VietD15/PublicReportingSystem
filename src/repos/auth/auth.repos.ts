@@ -59,26 +59,26 @@ export const CreateNewUser = async (userName: string, email: string, password: s
     }
 
 }
-export const loginService = async (identifier: string, password: string): Promise<ServiceResponse<IAuth>> => {
+export const loginService = async (userName: string, password: string): Promise<ServiceResponse<IAuth>> => {
 
-    identifier = identifier?.trim().toLowerCase();
+    userName = userName?.trim().toLowerCase();
     password = password?.trim();
 
-    if (!identifier || !password) {
+    if (!userName || !password) {
         return {
             success: false,
-            message: 'Identifier and password are required'
+            message: 'Username and password are required'
         };
     }
 
     const user = await authModel.findOne({
-        $or: [{ email: identifier }, { userName: identifier }]
+        userName: userName
     });
 
     if (!user) {
         return {
             success: false,
-            message: 'Incorrect email or password'
+            message: 'Incorrect username or password'
         };
     }
 
@@ -87,7 +87,7 @@ export const loginService = async (identifier: string, password: string): Promis
     if (!isPasswordMatch) {
         return {
             success: false,
-            message: 'Incorrect email or password'
+            message: 'Incorrect username or password'
         };
     }
 
