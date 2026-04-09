@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import authModel from '../../models/auth.model';
-import bcrypt from "bcrypt";
-
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
 import { OAuth2Client } from 'google-auth-library';
 import roleSchema from '../../models/auth/roles';
 import { ROLES } from '../../constant/role';
@@ -255,3 +252,60 @@ export const logout = async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+        const result = await authRepo.forgotPasswordService(email);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
+export const checkOTP = async (req: Request, res: Response) => {
+    try {
+        const { email, otp } = req.body;
+        const result = await authRepo.checkOTPService(email, otp);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Check OTP error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { email, newPassword } = req.body;
+        const result = await authRepo.resetPasswordService(email, newPassword);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("Reset password error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};

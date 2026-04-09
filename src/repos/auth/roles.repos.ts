@@ -1,6 +1,5 @@
 import roleSchema from "../../models/auth/roles";
 import rolePermissionSchema from "../../models/auth/role_permissions";
-import userRoleScheme from "../../models/auth/user_role";
 import resourceSchema from "../../models/auth/resources";
 import Action from "../../models/auth/actions";
 import PermissionAction from "../../models/auth/permission_actions";
