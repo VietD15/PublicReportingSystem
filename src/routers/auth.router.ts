@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, logout, refreshToken, loginWithGoogle } from '../modules/auth.controller/auth.controller';
+import { register, login, logout, refreshToken, loginWithGoogle, forgotPassword, checkOTP, resetPassword } from '../modules/auth.controller/auth.controller';
 import { authLimiter } from '../middlewares/rate-limit.middleware';
 import { DeletePermission, GetActions, GetPermission, GetPermissions, GetResources, UpsertPermission } from '../modules/admin.controller/permission';
 import { DeleteRole, DisableOrEnableRole, GetRoleById, GetRoles, UpsertRole } from '../modules/admin.controller/role';
@@ -11,6 +11,9 @@ const router = Router();
 router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
 router.post("/loginGoogle", authLimiter, loginWithGoogle);
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/check-otp", authLimiter, checkOTP);
+router.post("/reset-password", authLimiter, resetPassword);
 router.post("/logout", logout);
 router.post("/refresh-token", refreshToken);
 router.post("/assign-roles", AssignRoleToUser);

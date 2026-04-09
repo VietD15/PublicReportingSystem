@@ -20,6 +20,13 @@ cp .env.example .env
    - `JWT_REFRESH_SECRET`: Khóa bí mật cho refresh token
    - `MONGODB_URI`: URI kết nối MongoDB
    - `GOOGLE_CLIENT_ID`: Client ID từ Google Cloud Console (cho Google Login)
+  - `FRONTEND_URL`: URL frontend để build link reset mật khẩu
+  - `RESET_PASSWORD_URL`: URL trang reset mật khẩu (ưu tiên hơn FRONTEND_URL)
+  - `SMTP_HOST`: SMTP host (ví dụ `smtp.gmail.com`)
+  - `SMTP_PORT`: SMTP port (ví dụ `587` hoặc `465`)
+  - `SMTP_USER`: SMTP username
+  - `SMTP_PASS`: SMTP password/app password
+  - `SMTP_FROM`: Email người gửi (ví dụ `Public Reporting <no-reply@yourdomain.com>`)
 
 ### Cấu hình Google OAuth2
 
@@ -48,11 +55,42 @@ npm start
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Đăng ký tài khoản mới
-- `POST /api/auth/login` - Đăng nhập bằng email/username
-- `POST /api/auth/login-google` - Đăng nhập bằng Google
-- `POST /api/auth/refresh` - Làm mới access token
-- `POST /api/auth/logout` - Đăng xuất
+- `POST /api/v1/auth/register` - Đăng ký tài khoản mới
+- `POST /api/v1/auth/login` - Đăng nhập bằng email/username
+- `POST /api/v1/auth/loginGoogle` - Đăng nhập bằng Google
+- `POST /api/v1/auth/forgot-password` - Yêu cầu đặt lại mật khẩu
+- `POST /api/v1/auth/reset-password` - Đặt lại mật khẩu bằng token
+- `POST /api/v1/auth/refresh-token` - Làm mới access token
+- `POST /api/v1/auth/logout` - Đăng xuất
+
+### Forgot/Reset Password API
+
+**Endpoint:** `POST /api/auth/forgot-password`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Endpoint:** `POST /api/auth/reset-password`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "token": "reset-token-from-email",
+  "newPassword": "newStrongPassword123"
+}
+```
+
+**Lưu ý:**
+- Token reset hết hạn sau 15 phút
+- Token chỉ dùng được 1 lần
+- Ở môi trường dev, nếu chưa cấu hình SMTP, API `forgot-password` sẽ trả thêm `resetToken` để test
+- Nếu dùng Gmail, hãy bật 2FA và tạo App Password thay vì dùng mật khẩu đăng nhập thường
+- Nếu bạn gọi sai route không có `/api/v1`, request sẽ không đi vào controller nên sẽ không có email nào được gửi
 
 ### Google Login API
 
